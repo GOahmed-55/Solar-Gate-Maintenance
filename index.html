@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نظام الصيانة</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#6b7686;--pri:#1f6feb;--pri2:#1558c0;--line:#dde3ea;--ok:#1a7f4b;--bad:#c62828}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Tahoma,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:#14233a;color:#fff;padding:12px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;flex:1}
+nav{display:flex;gap:6px;flex-wrap:wrap}
+nav button,.btn{border:0;border-radius:8px;padding:9px 14px;cursor:pointer;font:inherit;background:var(--pri);color:#fff}
+nav button{background:#24395a}
+nav button.active{background:var(--pri)}
+.btn:hover{background:var(--pri2)}
+.btn.sec{background:#e8edf3;color:var(--ink)}
+.btn.bad{background:var(--bad)}
+main{max-width:1200px;margin:18px auto;padding:0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+label{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
+input,select,textarea{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+textarea{min-height:60px;resize:vertical}
+.full{grid-column:1/-1}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top}
+th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
+.tw{overflow:auto;max-height:65vh}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:14px}
+.stat{background:#f0f5ff;border:1px solid #cfe0ff;border-radius:10px;padding:12px}
+.stat b{display:block;font-size:22px;margin-top:4px}
+.msg{padding:10px 12px;border-radius:8px;margin-bottom:12px}
+.msg.ok{background:#e6f6ec;color:var(--ok)}.msg.err{background:#fdecec;color:var(--bad)}
+.hidden{display:none!important}
+#login{max-width:380px;margin:80px auto}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;background:#e8edf3;font-size:12px}
+@media print{header,.noprint{display:none!important}body{background:#fff}.card{border:0;padding:0}.tw{max-height:none;overflow:visible}}
+</style>
+</head>
+<body>
+
+<div id="login" class="card hidden">
+  <h2>تسجيل الدخول</h2>
+  <div id="loginMsg"></div>
+  <label>البريد الإلكتروني</label><input id="email" type="email" autocomplete="username">
+  <br><br>
+  <label>كلمة المرور</label><input id="pass" type="password" autocomplete="current-password">
+  <br><br>
+  <button class="btn" style="width:100%" onclick="doLogin()">دخول</button>
+</div>
+
+<div id="app" class="hidden">
+<header>
+  <h1>🔧 نظام الصيانة</h1>
+  <nav>
+    <button data-tab="add" class="active">تسجيل جهاز</button>
+    <button data-tab="list">السجل</button>
+    <button data-tab="report">التقارير</button>
+    <button data-tab="import">استيراد من Excel</button>
+  </nav>
+  <button class="btn sec" onclick="doLogout()">خروج</button>
+</header>
+<main>
+
+<!-- تسجيل -->
+<section id="tab-add">
+  <div class="card">
+    <h3 id="formTitle">تسجيل جهاز جديد</h3>
+    <div id="formMsg"></div>
+    <form id="f" onsubmit="saveRecord(event)">
+      <input type="hidden" id="id">
+      <div class="grid">
+        <div><label>الكود</label><input id="code"></div>
+        <div><label>اسم الشركة *</label><input id="company_name" required list="companies"></div>
+        <div><label>الاستلام (المستلم)</label><input id="received_by"></div>
+        <div><label>تاريخ الوارد *</label><input id="received_date" type="date" required></div>
+        <div><label>نوع الانفرتر</label><input id="inverter_type" list="invtypes"></div>
+        <div><label>السريال نمبر</label><input id="serial_number"></div>
+        <div><label>رقم تقرير الصيانة</label><input id="report_no"></div>
+        <div><label>الحالة</label>
+          <select id="status"><option>تم الاستلام</option><option>تحت الصيانة</option><option>جاهز للتسليم</option><option>تم التسليم</option></select></div>
+        <div><label>تاريخ التسليم</label><input id="delivery_date" type="date"></div>
+        <div><label>قيمة الصيانة</label><input id="maintenance_cost" type="number" step="0.01" min="0" value="0"></div>
+        <div><label>الإجمالي</label><input id="total" type="number" step="0.01" min="0" value="0"></div>
+        <div class="full"><label>البيان</label><textarea id="description"></textarea></div>
+        <div class="full"><label>مكونات (القطع المستبدلة/المستخدمة)</label><textarea id="components"></textarea></div>
+        <div class="full"><label>سبب العطل</label><textarea id="fault_reason"></textarea></div>
+      </div>
+      <datalist id="companies"></datalist><datalist id="invtypes"></datalist>
+      <br>
+      <button class="btn" type="submit">حفظ</button>
+      <button class="btn sec" type="button" onclick="resetForm()">جديد / إلغاء التعديل</button>
+    </form>
+  </div>
+</section>
+
+<!-- السجل -->
+<section id="tab-list" class="hidden">
+  <div class="card">
+    <div class="row noprint">
+      <div style="flex:2;min-width:200px"><label>بحث (شركة، سريال، كود، تقرير، عطل...)</label><input id="q" oninput="renderList()"></div>
+      <div><label>الحالة</label><select id="fstatus" onchange="renderList()"><option value="">الكل</option><option>تم الاستلام</option><option>تحت الصيانة</option><option>جاهز للتسليم</option><option>تم التسليم</option></select></div>
+      <button class="btn sec" onclick="loadAll(true)">تحديث</button>
+      <button class="btn" onclick="exportCSV(filtered(), 'records')">تصدير Excel</button>
+    </div>
+    <p id="listCount" style="color:var(--mut)"></p>
+    <div class="tw"><table id="listTable"></table></div>
+  </div>
+</section>
+
+<!-- التقارير -->
+<section id="tab-report" class="hidden">
+  <div class="card">
+    <div class="row noprint">
+      <div><label>نوع التقرير</label>
+        <select id="rtype" onchange="runReport()"><option value="daily">يومي</option><option value="weekly">أسبوعي (السبت – الجمعة)</option><option value="monthly">شهري</option></select></div>
+      <div><label>التاريخ (أي يوم داخل الفترة)</label><input id="rdate" type="date" onchange="runReport()"></div>
+      <button class="btn sec" onclick="shiftReport(-1)">◀ السابق</button>
+      <button class="btn sec" onclick="shiftReport(1)">التالي ▶</button>
+      <button class="btn" onclick="window.print()">طباعة / PDF</button>
+      <button class="btn" onclick="exportCSV(reportRows,'report')">تصدير Excel</button>
+    </div>
+  </div>
+  <div class="card" id="reportBox"></div>
+</section>
+
+<!-- استيراد -->
+<section id="tab-import" class="hidden">
+  <div class="card">
+    <h3>استيراد بياناتك الحالية من Excel</h3>
+    <ol>
+      <li>افتح شيت الإكسيل واختار <b>Save As ← CSV UTF-8</b>.</li>
+      <li>تأكد أن الصف الأول هو أسماء الأعمدة (الكود، اسم الشركه، الاستلام، البيان، نوع الانفرتر، مكونات، سبب العطل، السريال نمبر، رقم تقرير الصيانة، تاريخ الوارد، قيمة الصيانة، الاجمالي).</li>
+      <li>اختار الملف هنا وراجع المعاينة ثم اضغط استيراد.</li>
+    </ol>
+    <div id="impMsg"></div>
+    <input type="file" id="csvfile" accept=".csv,text/csv" onchange="previewCSV(event)">
+    <div id="impPreview" style="margin-top:12px"></div>
+    <br><button class="btn hidden" id="impBtn" onclick="doImport()">استيراد الآن</button>
+    <p style="color:var(--mut)">ملاحظة: التواريخ تُقرأ بصيغة يوم/شهر/سنة (مثل 25/10/2026) أو 2026-10-25.</p>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let sb, all = [], reportRows = [], importRows = [];
+const FIELDS = ['code','company_name','received_by','description','inverter_type','components','fault_reason','serial_number','report_no','received_date','maintenance_cost','total','status','delivery_date'];
+const HEAD = {code:'الكود',company_name:'اسم الشركة',received_by:'الاستلام',description:'البيان',inverter_type:'نوع الانفرتر',components:'مكونات',fault_reason:'سبب العطل',serial_number:'السريال نمبر',report_no:'رقم تقرير الصيانة',received_date:'تاريخ الوارد',maintenance_cost:'قيمة الصيانة',total:'الإجمالي',status:'الحالة',delivery_date:'تاريخ التسليم'};
+const IMPORT_MAP = {'الكود':'code','اسم الشركه':'company_name','اسم الشركة':'company_name','الاستلام':'received_by','البيان':'description','نوع الانفرتر':'inverter_type','مكونات':'components','المكونات':'components','سبب العطل':'fault_reason','السريال نمبر':'serial_number','السريال':'serial_number','رقم تقرير الصيانة':'report_no','تاريخ الوارد':'received_date','قيمة الصيانة':'maintenance_cost','الاجمالي':'total','الإجمالي':'total','الحالة':'status','تاريخ التسليم':'delivery_date'};
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const today = () => iso(new Date());
+function show(el, cls, text){ el.innerHTML = text ? `<div class="msg ${cls}">${esc(text)}</div>` : ''; }
+
+/* ---------- بدء التشغيل ---------- */
+(async function init(){
+  if(!window.CONFIG || CONFIG.SUPABASE_URL.includes('xxxx')){
+    document.body.innerHTML = '<div class="card" style="max-width:520px;margin:60px auto"><h3>الإعداد ناقص</h3><p>افتح الملف config.js وضع رابط Supabase والمفتاح.</p></div>'; return;
+  }
+  sb = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+  const { data:{ session } } = await sb.auth.getSession();
+  setAuth(!!session);
+  sb.auth.onAuthStateChange((_e, s) => setAuth(!!s));
+  document.querySelectorAll('nav button').forEach(b => b.onclick = () => tab(b.dataset.tab));
+  $('rdate').value = today();
+})();
+
+function setAuth(on){
+  $('login').classList.toggle('hidden', on);
+  $('app').classList.toggle('hidden', !on);
+  if(on){ resetForm(); loadAll(); }
+}
+async function doLogin(){
+  const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pass').value });
+  show($('loginMsg'), 'err', error ? 'بيانات الدخول غير صحيحة' : '');
+}
+async function doLogout(){ await sb.auth.signOut(); }
+
+function tab(name){
+  ['add','list','report','import'].forEach(t => $('tab-'+t).classList.toggle('hidden', t!==name));
+  document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
+  if(name==='list') renderList();
+  if(name==='report') runReport();
+}
+
+/* ---------- تحميل البيانات ---------- */
+async function loadAll(force){
+  let rows = [], from = 0, step = 1000;
+  while(true){
+    const { data, error } = await sb.from('repairs').select('*').order('received_date',{ascending:false}).order('id',{ascending:false}).range(from, from+step-1);
+    if(error){ show($('formMsg'),'err','خطأ في التحميل: '+error.message); return; }
+    rows = rows.concat(data);
+    if(data.length < step) break;
+    from += step;
+  }
+  all = rows;
+  $('companies').innerHTML = [...new Set(all.map(r=>r.company_name).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('');
+  $('invtypes').innerHTML = [...new Set(all.map(r=>r.inverter_type).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join('');
+  renderList();
+  if(!$('tab-report').classList.contains('hidden')) runReport();
+}
+
+/* ---------- التسجيل والتعديل ---------- */
+function resetForm(){
+  $('f').reset(); $('id').value=''; $('received_date').value = today();
+  $('maintenance_cost').value = 0; $('total').value = 0;
+  $('formTitle').textContent = 'تسجيل جهاز جديد'; show($('formMsg'),'','');
+}
+$('maintenance_cost')?.addEventListener('input', () => {});
+document.addEventListener('input', e => {
+  if(e.target.id==='maintenance_cost' && !$('id').value) $('total').value = e.target.value;
+});
+async function saveRecord(e){
+  e.preventDefault();
+  const rec = {};
+  FIELDS.forEach(k => { let v = $(k).value.trim(); rec[k] = v===''?null:v; });
+  ['maintenance_cost','total'].forEach(k => rec[k] = Number(rec[k]||0));
+  const id = $('id').value;
+  const { error } = id ? await sb.from('repairs').update(rec).eq('id', id) : await sb.from('repairs').insert(rec);
+  if(error){ show($('formMsg'),'err','تعذر الحفظ: '+error.message); return; }
+  show($('formMsg'),'ok', id ? 'تم تحديث السجل' : 'تم حفظ السجل');
+  if(!id) resetForm();
+  show($('formMsg'),'ok', id ? 'تم تحديث السجل' : 'تم حفظ السجل');
+  await loadAll();
+}
+function editRec(id){
+  const r = all.find(x => x.id===id); if(!r) return;
+  FIELDS.forEach(k => $(k).value = r[k] ?? '');
+  $('id').value = r.id; $('formTitle').textContent = 'تعديل سجل رقم '+r.id;
+  tab('add'); window.scrollTo(0,0);
+}
+async function delRec(id){
+  if(!confirm('حذف هذا السجل نهائياً؟')) return;
+  const { error } = await sb.from('repairs').delete().eq('id', id);
+  if(error) alert('تعذر الحذف: '+error.message); else loadAll();
+}
+
+/* ---------- السجل ---------- */
+function filtered(){
+  const q = $('q').value.trim().toLowerCase(), st = $('fstatus').value;
+  return all.filter(r => (!st || r.status===st) && (!q || FIELDS.some(k => String(r[k]??'').toLowerCase().includes(q))));
+}
+function renderList(){
+  const rows = filtered();
+  $('listCount').textContent = `عدد السجلات: ${rows.length} من ${all.length}`;
+  $('listTable').innerHTML = '<tr><th>#</th>'+FIELDS.map(k=>`<th>${HEAD[k]}</th>`).join('')+'<th class="noprint"></th></tr>' +
+    rows.slice(0,500).map(r => '<tr><td>'+r.id+'</td>'+FIELDS.map(k => {
+      const v = r[k];
+      return '<td>'+((k==='maintenance_cost'||k==='total')?money(v):esc(v))+'</td>';
+    }).join('')+`<td class="noprint" style="white-space:nowrap"><button class="btn sec" onclick="editRec(${r.id})">تعديل</button> <button class="btn bad" onclick="delRec(${r.id})">حذف</button></td></tr>`).join('');
+  if(rows.length>500) $('listCount').textContent += ' (يُعرض أول 500، استخدم البحث أو التصدير)';
+}
+
+/* ---------- التقارير ---------- */
+function parseISO(s){ const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function rangeFor(type, dateStr){
+  const d = parseISO(dateStr);
+  if(type==='daily') return [dateStr, dateStr, 'تقرير يومي: '+dateStr];
+  if(type==='weekly'){
+    const back = (d.getDay()+1)%7;           // السبت بداية الأسبوع
+    const s = new Date(d); s.setDate(d.getDate()-back);
+    const e = new Date(s); e.setDate(s.getDate()+6);
+    return [iso(s), iso(e), `تقرير أسبوعي: من ${iso(s)} إلى ${iso(e)}`];
+  }
+  const s = new Date(d.getFullYear(), d.getMonth(), 1), e = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  return [iso(s), iso(e), `تقرير شهري: ${d.getMonth()+1}/${d.getFullYear()}`];
+}
+function shiftReport(dir){
+  const t = $('rtype').value, d = parseISO($('rdate').value || today());
+  if(t==='daily') d.setDate(d.getDate()+dir);
+  else if(t==='weekly') d.setDate(d.getDate()+7*dir);
+  else d.setMonth(d.getMonth()+dir, 1);
+  $('rdate').value = iso(d); runReport();
+}
+function groupBy(rows, key){
+  const m = {};
+  rows.forEach(r => { const k = (r[key]||'غير محدد').trim?.() || 'غير محدد'; (m[k] ||= {n:0,total:0}); m[k].n++; m[k].total += Number(r.total||0); });
+  return Object.entries(m).sort((a,b)=>b[1].n-a[1].n);
+}
+function miniTable(title, g, top){
+  const rows = top ? g.slice(0,top) : g;
+  return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th><th>الإجمالي</th></tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td><td>${money(v.total)}</td></tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
+}
+function runReport(){
+  const [from, to, title] = rangeFor($('rtype').value, $('rdate').value || today());
+  reportRows = all.filter(r => r.received_date >= from && r.received_date <= to).sort((a,b)=>a.received_date.localeCompare(b.received_date));
+  const sumM = reportRows.reduce((s,r)=>s+Number(r.maintenance_cost||0),0);
+  const sumT = reportRows.reduce((s,r)=>s+Number(r.total||0),0);
+  const delivered = reportRows.filter(r=>r.status==='تم التسليم').length;
+  $('reportBox').innerHTML = `
+    <h3>${title}</h3>
+    <div class="stats">
+      <div class="stat">عدد الأجهزة الواردة<b>${reportRows.length}</b></div>
+      <div class="stat">إجمالي قيمة الصيانة<b>${money(sumM)}</b></div>
+      <div class="stat">الإجمالي<b>${money(sumT)}</b></div>
+      <div class="stat">تم تسليمها<b>${delivered}</b></div>
+      <div class="stat">لم تُسلَّم بعد<b>${reportRows.length-delivered}</b></div>
+    </div>
+    <div class="grid">
+      <div>${miniTable('حسب الشركة', groupBy(reportRows,'company_name'))}</div>
+      <div>${miniTable('حسب نوع الانفرتر', groupBy(reportRows,'inverter_type'))}</div>
+      <div>${miniTable('أكثر أسباب العطل', groupBy(reportRows,'fault_reason'), 10)}</div>
+      <div>${miniTable('حسب الحالة', groupBy(reportRows,'status'))}</div>
+    </div>
+    <h4>التفاصيل</h4>
+    <div class="tw"><table><tr>${FIELDS.map(k=>`<th>${HEAD[k]}</th>`).join('')}</tr>
+    ${reportRows.map(r=>'<tr>'+FIELDS.map(k=>'<td>'+((k==='maintenance_cost'||k==='total')?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>').join('') || `<tr><td colspan="${FIELDS.length}">لا توجد سجلات في هذه الفترة</td></tr>`}
+    </table></div>`;
+}
+
+/* ---------- التصدير (CSV يفتح في Excel بالعربي) ---------- */
+function exportCSV(rows, name){
+  const q = v => '"'+String(v??'').replace(/"/g,'""')+'"';
+  const lines = [FIELDS.map(k=>q(HEAD[k])).join(',')].concat(rows.map(r => FIELDS.map(k=>q(r[k])).join(',')));
+  const blob = new Blob(['\ufeff'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${today()}.csv`; a.click();
+}
+
+/* ---------- الاستيراد ---------- */
+function parseCSV(text){
+  text = text.replace(/^\ufeff/,'');
+  const first = text.split(/\r?\n/)[0] || '';
+  const delim = (first.split(';').length > first.split(',').length) ? ';' : (first.includes('\t') && !first.includes(',') ? '\t' : ',');
+  const rows = []; let row = [], cur = '', inQ = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; } else cur+=c; }
+    else if(c==='"') inQ = true;
+    else if(c===delim){ row.push(cur); cur=''; }
+    else if(c==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+    else if(c!=='\r') cur+=c;
+  }
+  if(cur!=='' || row.length){ row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim()!==''));
+}
+function normDate(v){
+  v = (v||'').trim(); if(!v) return null;
+  let m = v.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+  m = v.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if(m){ let y = m[3].length===2 ? '20'+m[3] : m[3]; return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; }
+  return null;
+}
+const num = v => { const n = parseFloat(String(v||'').replace(/[,\s]/g,'')); return isNaN(n) ? 0 : n; };
+function previewCSV(e){
+  const f = e.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const rows = parseCSV(rd.result);
+    if(rows.length<2){ show($('impMsg'),'err','الملف فارغ'); return; }
+    const head = rows[0].map(h => IMPORT_MAP[h.trim()] || null);
+    if(!head.includes('company_name')){ show($('impMsg'),'err','لم أجد عمود "اسم الشركه" في الصف الأول'); return; }
+    let skipped = 0; importRows = [];
+    rows.slice(1).forEach(r => {
+      const o = {}; head.forEach((k,i) => { if(k) o[k] = (r[i]||'').trim(); });
+      if(!o.company_name){ skipped++; return; }
+      const d = normDate(o.received_date) || today();
+      importRows.push({ code:o.code||null, company_name:o.company_name, received_by:o.received_by||null, description:o.description||null,
+        inverter_type:o.inverter_type||null, components:o.components||null, fault_reason:o.fault_reason||null, serial_number:o.serial_number||null,
+        report_no:o.report_no||null, received_date:d, maintenance_cost:num(o.maintenance_cost), total:o.total? num(o.total): num(o.maintenance_cost),
+        status:o.status||'تم الاستلام', delivery_date:normDate(o.delivery_date) });
+    });
+    show($('impMsg'),'ok',`جاهز للاستيراد: ${importRows.length} سجل (تم تخطي ${skipped} صف بدون اسم شركة)`);
+    $('impPreview').innerHTML = '<div class="tw" style="max-height:260px"><table><tr>'+FIELDS.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>'+
+      importRows.slice(0,8).map(r=>'<tr>'+FIELDS.map(k=>`<td>${esc(r[k])}</td>`).join('')+'</tr>').join('')+'</table></div><p>معاينة أول 8 صفوف</p>';
+    $('impBtn').classList.remove('hidden');
+  };
+  rd.readAsText(f, 'utf-8');
+}
+async function doImport(){
+  $('impBtn').disabled = true;
+  for(let i=0;i<importRows.length;i+=500){
+    const { error } = await sb.from('repairs').insert(importRows.slice(i,i+500));
+    if(error){ show($('impMsg'),'err','فشل الاستيراد: '+error.message); $('impBtn').disabled=false; return; }
+  }
+  show($('impMsg'),'ok',`تم استيراد ${importRows.length} سجل بنجاح`);
+  importRows = []; $('impBtn').classList.add('hidden'); $('impBtn').disabled=false; $('impPreview').innerHTML=''; $('csvfile').value='';
+  loadAll();
+}
+</script>
+</body>
+</html>
