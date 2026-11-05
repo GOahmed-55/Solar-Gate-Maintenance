@@ -182,7 +182,14 @@ function setAuth(on){
 }
 async function doLogin(){
   const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pass').value });
-  show($('loginMsg'), 'err', error ? 'بيانات الدخول غير صحيحة' : '');
+  if(!error){ show($('loginMsg'), '', ''); return; }
+  const m = (error.message||'').toLowerCase();
+  let txt = 'خطأ: ' + error.message;
+  if(m.includes('invalid login')) txt = 'الإيميل أو كلمة المرور غير مطابقين للمستخدم المسجل في هذا المشروع (' + error.message + ')';
+  else if(m.includes('not confirmed')) txt = 'المستخدم موجود لكن لم يتم تأكيده. من Supabase افتح Authentication ثم Users واضغط على المستخدم واختار Confirm user';
+  else if(m.includes('api key') || m.includes('apikey')) txt = 'مفتاح anon في config.js غير صحيح';
+  else if(m.includes('fetch') || m.includes('network')) txt = 'تعذر الاتصال بـ Supabase، تأكد من رابط المشروع في config.js';
+  show($('loginMsg'), 'err', txt);
 }
 async function doLogout(){ await sb.auth.signOut(); }
 
