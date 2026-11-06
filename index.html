@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>نظام الصيانة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
+<script>document.write('<script src="config.js?t='+Date.now()+'"><\/script>')</script>
 <style>
 :root{--bg:#f4f6f9;--card:#fff;--ink:#1c2430;--mut:#6b7686;--pri:#1f6feb;--pri2:#1558c0;--line:#dde3ea;--ok:#1a7f4b;--bad:#c62828}
 *{box-sizing:border-box}
@@ -187,7 +187,10 @@ async function doLogin(){
   let txt = 'خطأ: ' + error.message;
   if(m.includes('invalid login')) txt = 'الإيميل أو كلمة المرور غير مطابقين للمستخدم المسجل في هذا المشروع (' + error.message + ')';
   else if(m.includes('not confirmed')) txt = 'المستخدم موجود لكن لم يتم تأكيده. من Supabase افتح Authentication ثم Users واضغط على المستخدم واختار Confirm user';
-  else if(m.includes('api key') || m.includes('apikey')) txt = 'مفتاح anon في config.js غير صحيح';
+  else if(m.includes('api key') || m.includes('apikey')){
+    const k = String(CONFIG.SUPABASE_ANON_KEY||'');
+    txt = 'مفتاح anon في config.js غير صحيح. المفتاح المستخدم يبدأ بـ "' + k.slice(0,14) + '" وطوله ' + k.length + ' حرف، والرابط: ' + CONFIG.SUPABASE_URL;
+  }
   else if(m.includes('fetch') || m.includes('network')) txt = 'تعذر الاتصال بـ Supabase، تأكد من رابط المشروع في config.js';
   show($('loginMsg'), 'err', txt);
 }
