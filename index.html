@@ -81,7 +81,9 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
     <button data-tab="list">السجل</button>
     <button data-tab="report">التقارير</button>
     <button data-tab="import">استيراد من Excel</button>
+    <button data-tab="users">المستخدمون</button>
   </nav>
+  <span id="who" style="font-size:13px;color:var(--mut)"></span>
   <button class="btn sec" onclick="doLogout()">خروج</button>
 </header>
 <main>
@@ -105,7 +107,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
         <div><label>مهندس الصيانة المسئول</label><input id="engineer" list="engineers"></div>
         <div><label>تاريخ الاستلام *</label><input id="received_date" type="date" required></div>
         <div><label>تاريخ التسليم للعميل</label><input id="delivery_date" type="date"></div>
-        <div><label>قيمة الصيانة</label><input id="maintenance_cost" type="number" step="0.01" min="0" value="0"></div>
+        <div id="costBox"><label>قيمة الصيانة</label><input id="maintenance_cost" type="number" step="0.01" min="0" value="0"></div>
         <div class="full">
           <label>الحالة (المسار: تم الاستلام ← فحص ← بانتظار رد العميل ← صيانة أو رفض ← تم التسليم)</label>
           <div class="flow" id="flow"></div>
@@ -175,12 +177,23 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
   </div>
 </section>
 
+<!-- المستخدمون (للمدير فقط) -->
+<section id="tab-users" class="hidden">
+  <div class="card">
+    <h3>المستخدمون والصلاحيات</h3>
+    <p style="color:var(--mut)"><b>مدير</b>: كل الصلاحيات (إضافة التكلفة ورؤيتها، التقارير بالقيم، الحذف، الاستيراد، إدارة المستخدمين). <b>موظف</b>: يسجّل الأجهزة ويعدّلها ويرى التقارير بدون أي أرقام تكلفة، ولا يحذف.<br>
+    لإضافة مستخدم جديد: Supabase ثم Authentication ثم Users ثم Add user (يظهر هنا تلقائياً كـ "موظف").</p>
+    <div id="usersMsg"></div>
+    <div class="tw"><table id="usersTable"></table></div>
+  </div>
+</section>
+
 </main>
 </div>
 
 <script>
 const $ = id => document.getElementById(id);
-let sb, all = [], reportRows = [], importRows = [], curStatus = null, chipSel = '';
+let sb, all = [], reportRows = [], importRows = [], curStatus = null, chipSel = '', IS_ADMIN = false, ME = null, authOn = null;
 
 /* ---------- إعدادات النظام (عدّلها من هنا فقط) ---------- */
 const TYPES = ['Solar Pump','Off_Grid','On_Grid','Hybrid','Industrial'];
@@ -196,6 +209,7 @@ const NEXT = {
 };
 const FIELDS = ['code','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','fault_reason','engineer','required_components','received_date','delivery_date','maintenance_cost'];
 const SAVE_FIELDS = FIELDS.filter(k => k!=='code');
+const vf = () => FIELDS.filter(k => k!=='maintenance_cost' || IS_ADMIN);   // الحقول المرئية حسب الصلاحية
 const HEAD = {code:'الكود',customer_name:'اسم العميل',company_name:'اسم الشركة',device_type:'نوع الجهاز',brand:'البراند',color:'لون الجهاز',capacity:'قدرة الجهاز',serial_number:'السريال نمبر',status:'الحالة',fault_reason:'العطل / سبب العطل',engineer:'مهندس الصيانة',required_components:'المكونات المطلوبة',received_date:'تاريخ الاستلام',delivery_date:'تاريخ التسليم',maintenance_cost:'قيمة الصيانة'};
 const IMPORT_MAP = {'اسم العميل':'customer_name','العميل':'customer_name','اسم الشركه':'company_name','اسم الشركة':'company_name','الشركة':'company_name','الشركه':'company_name','نوع الجهاز':'device_type','البراند':'brand','لون الجهاز':'color','اللون':'color','قدرة الجهاز':'capacity','القدرة':'capacity','السريال نمبر':'serial_number','السريال':'serial_number','الحالة':'status','الحاله':'status','العطل / سبب العطل':'fault_reason','العطل':'fault_reason','سبب العطل':'fault_reason','مهندس الصيانة':'engineer','مهندس الصيانة المسئول':'engineer','المكونات المطلوبة':'required_components','المكونات المطلوبة للصيانة':'required_components','تاريخ الاستلام':'received_date','تاريخ الوارد':'received_date','تاريخ التسليم':'delivery_date','تاريخ التسليم للعميل':'delivery_date','قيمة الصيانة':'maintenance_cost'};
 
@@ -225,10 +239,42 @@ function show(el, cls, text){ el.innerHTML = text ? `<div class="msg ${cls}">${e
   $('rdate').value = today();
 })();
 
-function setAuth(on){
+async function setAuth(on){
+  if(on === authOn) return;            // تجاهل إشعارات تجديد الجلسة حتى لا يُمسح الفورم
+  authOn = on;
   $('login').classList.toggle('hidden', on);
   $('app').classList.toggle('hidden', !on);
-  if(on){ resetForm(); loadAll(); }
+  if(on){ await loadRole(); resetForm(); loadAll(); }
+}
+async function loadRole(){
+  const { data:{ user } } = await sb.auth.getUser();
+  ME = user ? user.id : null;
+  let role = 'staff';                  // الافتراضي الأكثر أماناً
+  if(user){
+    const { data } = await sb.from('profiles').select('role').eq('id', user.id).maybeSingle();
+    if(data && data.role) role = data.role;
+  }
+  IS_ADMIN = role === 'admin';
+  $('costBox').classList.toggle('hidden', !IS_ADMIN);
+  document.querySelector('nav button[data-tab=import]').classList.toggle('hidden', !IS_ADMIN);
+  document.querySelector('nav button[data-tab=users]').classList.toggle('hidden', !IS_ADMIN);
+  $('who').textContent = (user?.email || '') + ' — ' + (IS_ADMIN ? 'مدير' : 'موظف');
+}
+async function saveCost(jobId, cost){
+  const { error } = await sb.from('job_costs').upsert({ job_id: jobId, maintenance_cost: cost });
+  return error;
+}
+async function loadUsers(){
+  const { data, error } = await sb.from('profiles').select('*').order('created_at');
+  if(error){ show($('usersMsg'),'err','تعذر تحميل المستخدمين: '+error.message); return; }
+  $('usersTable').innerHTML = '<tr><th>البريد</th><th>الصلاحية</th></tr>' + (data||[]).map(u =>
+    `<tr><td>${esc(u.email)}</td><td><select ${u.id===ME?'disabled title="لا يمكنك تغيير صلاحيتك"':''} onchange="setRole('${esc(u.id)}',this.value)">
+      <option value="staff" ${u.role==='staff'?'selected':''}>موظف (بدون تكلفة)</option>
+      <option value="admin" ${u.role==='admin'?'selected':''}>مدير (كل الصلاحيات)</option></select></td></tr>`).join('');
+}
+async function setRole(id, role){
+  const { error } = await sb.from('profiles').update({ role }).eq('id', id);
+  show($('usersMsg'), error?'err':'ok', error ? 'تعذر التغيير: '+error.message : 'تم تغيير الصلاحية (تسري عند دخول المستخدم القادم)');
 }
 async function doLogin(){
   const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pass').value });
@@ -247,10 +293,12 @@ async function doLogin(){
 async function doLogout(){ await sb.auth.signOut(); }
 
 function tab(name){
-  ['add','list','report','import'].forEach(t => $('tab-'+t).classList.toggle('hidden', t!==name));
+  if((name==='import' || name==='users') && !IS_ADMIN) name = 'add';
+  ['add','list','report','import','users'].forEach(t => $('tab-'+t).classList.toggle('hidden', t!==name));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
   if(name==='list') renderList();
   if(name==='report') runReport();
+  if(name==='users') loadUsers();
 }
 
 /* ---------- تحميل البيانات ---------- */
@@ -266,6 +314,17 @@ async function loadAll(){
     rows = rows.concat(data);
     if(data.length < step) break;
     from += step;
+  }
+  if(IS_ADMIN){                        // التكاليف تُجلب للمدير فقط (جدول محمي)
+    const cm = {}; let f = 0;
+    while(true){
+      const { data, error } = await sb.from('job_costs').select('job_id,maintenance_cost').range(f, f+999);
+      if(error){ show($('formMsg'),'err','تعذر تحميل التكاليف: '+error.message+' — شغّل permissions.sql في Supabase.'); break; }
+      data.forEach(c => cm[c.job_id] = c.maintenance_cost);
+      if(data.length < 1000) break;
+      f += 1000;
+    }
+    rows.forEach(r => r.maintenance_cost = cm[r.id] ?? 0);
   }
   all = rows;
   const opts = k => [...new Set(all.map(r=>r[k]).filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('');
@@ -296,8 +355,8 @@ function resetForm(){
 async function saveRecord(e){
   e.preventDefault();
   const rec = {};
-  SAVE_FIELDS.forEach(k => { const v = $(k).value.trim(); rec[k] = v===''?null:v; });
-  rec.maintenance_cost = Number(rec.maintenance_cost||0);
+  SAVE_FIELDS.filter(k => k!=='maintenance_cost').forEach(k => { const v = $(k).value.trim(); rec[k] = v===''?null:v; });
+  const cost = Number($('maintenance_cost').value||0);
   rec.status = $('status').value;
   if(!rec.customer_name && !rec.company_name){ show($('formMsg'),'err','اكتب اسم العميل أو اسم الشركة على الأقل'); return; }
   if(!rec.device_type){ show($('formMsg'),'err','اختر نوع الجهاز'); return; }
@@ -310,11 +369,16 @@ async function saveRecord(e){
   if(id){
     const { error } = await sb.from('maintenance_jobs').update(rec).eq('id', id);
     if(error){ show($('formMsg'),'err','تعذر الحفظ: '+error.message); return; }
-    resetForm(); await loadAll(); tab('list'); show($('listMsg'),'ok','تم تحديث السجل');
+    const ce = IS_ADMIN ? await saveCost(id, cost) : null;
+    resetForm(); await loadAll(); tab('list');
+    show($('listMsg'), ce?'err':'ok', ce ? 'تم حفظ الجهاز لكن تعذر حفظ التكلفة: '+ce.message : 'تم تحديث السجل');
   } else {
-    const { data, error } = await sb.from('maintenance_jobs').insert(rec).select('code').single();
+    const { data, error } = await sb.from('maintenance_jobs').insert(rec).select('id,code').single();
     if(error){ show($('formMsg'),'err','تعذر الحفظ: '+error.message); return; }
-    resetForm(); show($('formMsg'),'ok','تم الحفظ. كود الجهاز: ' + (data?.code||'')); await loadAll();
+    const ce = IS_ADMIN && data ? await saveCost(data.id, cost) : null;
+    resetForm();
+    show($('formMsg'), ce?'err':'ok', ce ? 'تم الحفظ (الكود '+(data?.code||'')+') لكن تعذر حفظ التكلفة: '+ce.message : 'تم الحفظ. كود الجهاز: ' + (data?.code||''));
+    await loadAll();
   }
 }
 async function editRec(id){
@@ -361,12 +425,12 @@ function renderList(){
   renderChips();
   const rows = filtered();
   $('listCount').textContent = `عدد السجلات: ${rows.length} من ${all.length}`;
-  const cols = ['code','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'];
+  const cols = ['code','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
   $('listTable').innerHTML = '<tr><th class="noprint"></th>'+cols.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>' +
     rows.slice(0,500).map(r => {
       const n = (NEXT[r.status]||[]);
       const quick = n.length===1 ? `<br><button class="btn acc sm noprint" style="margin-top:4px" title="نقل للمرحلة التالية" onclick="advance(${r.id})">← ${esc(n[0])}</button>` : '';
-      return `<tr><td class="noprint" style="white-space:nowrap"><button class="btn sec sm" onclick="editRec(${r.id})">تعديل</button> <button class="btn bad sm" onclick="delRec(${r.id})">حذف</button></td>`+
+      return `<tr><td class="noprint" style="white-space:nowrap"><button class="btn sec sm" onclick="editRec(${r.id})">تعديل</button>${IS_ADMIN ? ` <button class="btn bad sm" onclick="delRec(${r.id})">حذف</button>` : ''}</td>`+
         cols.map(k => '<td'+(k==='code'?' style="white-space:nowrap"':'')+'>'+(k==='status'?badge(r[k])+quick:k==='maintenance_cost'?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>';
     }).join('');
   if(rows.length>500) $('listCount').textContent += ' (يُعرض أول 500، استخدم البحث أو التصدير)';
@@ -400,10 +464,10 @@ function groupBy(rows, fn){
 }
 function miniTable(title, g, top){
   const rows = top ? g.slice(0,top) : g;
-  return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th><th>القيمة</th></tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td><td>${money(v.total)}</td></tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
+  return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th>${IS_ADMIN?'<th>القيمة</th>':''}</tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td>${IS_ADMIN?`<td>${money(v.total)}</td>`:''}</tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
 }
 function detailTable(rows){
-  const cols = ['code','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'];
+  const cols = ['code','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
   return `<div class="tw"><table><tr>${cols.map(k=>`<th>${HEAD[k]}</th>`).join('')}</tr>`+
     (rows.map(r=>'<tr>'+cols.map(k=>'<td>'+(k==='status'?badge(r[k]):k==='maintenance_cost'?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>').join('') || `<tr><td colspan="${cols.length}">لا توجد سجلات في هذه الفترة</td></tr>`)+'</table></div>';
 }
@@ -421,7 +485,7 @@ function runReport(){
     <div class="stats">
       <div class="stat">أجهزة مستلمة في الفترة<b>${recv.length}</b></div>
       <div class="stat">أجهزة مسلّمة في الفترة<b>${deliv.length}</b></div>
-      <div class="stat">قيمة صيانة المسلّم<b>${money(revenue)}</b></div>
+      ${IS_ADMIN ? `<div class="stat">قيمة صيانة المسلّم<b>${money(revenue)}</b></div>` : ''}
     </div>
     <h4>الوضع الحالي (لكل الأجهزة)</h4>
     <div class="stats">
@@ -447,7 +511,8 @@ function runReport(){
 /* ---------- التصدير (CSV يفتح في Excel بالعربي) ---------- */
 function exportCSV(rows, name){
   const q = v => '"'+String(v??'').replace(/"/g,'""')+'"';
-  const lines = [FIELDS.map(k=>q(HEAD[k])).join(',')].concat(rows.map(r => FIELDS.map(k=>q(r[k])).join(',')));
+  const F = vf();
+  const lines = [F.map(k=>q(HEAD[k])).join(',')].concat(rows.map(r => F.map(k=>q(r[k])).join(',')));
   const blob = new Blob(['﻿'+lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${name}-${today()}.csv`; a.click();
 }
@@ -511,8 +576,16 @@ function previewCSV(e){
 async function doImport(){
   $('impBtn').disabled = true;
   for(let i=0;i<importRows.length;i+=200){
-    const { error } = await sb.from('maintenance_jobs').insert(importRows.slice(i,i+200));
+    const chunk = importRows.slice(i,i+200);
+    const costs = chunk.map(r => r.maintenance_cost);
+    const payload = chunk.map(({maintenance_cost, ...rest}) => rest);
+    const { data, error } = await sb.from('maintenance_jobs').insert(payload).select('id');
     if(error){ show($('impMsg'),'err','فشل الاستيراد: '+error.message); $('impBtn').disabled=false; return; }
+    const cr = (data||[]).map((d,j) => ({ job_id:d.id, maintenance_cost:costs[j] })).filter(c => c.maintenance_cost > 0);
+    if(cr.length){
+      const { error:e2 } = await sb.from('job_costs').upsert(cr);
+      if(e2){ show($('impMsg'),'err','تم استيراد الأجهزة لكن تعذر حفظ التكاليف: '+e2.message); $('impBtn').disabled=false; return; }
+    }
   }
   show($('impMsg'),'ok',`تم استيراد ${importRows.length} سجل بنجاح`);
   importRows = []; $('impBtn').classList.add('hidden'); $('impBtn').disabled=false; $('impPreview').innerHTML=''; $('csvfile').value='';
