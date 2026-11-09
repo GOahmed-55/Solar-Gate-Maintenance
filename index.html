@@ -97,6 +97,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
       <input type="hidden" id="id">
       <div class="grid">
         <div><label>الكود (تلقائي)</label><input id="code" readonly placeholder="يتولد تلقائياً بعد الحفظ"></div>
+        <div><label>الفرع *</label><input id="branch" list="branches" required></div>
         <div><label>اسم العميل</label><input id="customer_name" list="customers"></div>
         <div><label>اسم الشركة</label><input id="company_name" list="companies"></div>
         <div><label>نوع الجهاز *</label><select id="device_type" required></select></div>
@@ -120,7 +121,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
         <div class="full"><label>المكونات المطلوبة للصيانة</label><textarea id="required_components"></textarea></div>
         <div class="full hidden" id="histBox"><label>سجل الحالات</label><ul class="hist" id="hist"></ul></div>
       </div>
-      <datalist id="customers"></datalist><datalist id="companies"></datalist><datalist id="brands"></datalist><datalist id="colors"></datalist><datalist id="engineers"></datalist>
+      <datalist id="branches"></datalist><datalist id="customers"></datalist><datalist id="companies"></datalist><datalist id="brands"></datalist><datalist id="colors"></datalist><datalist id="engineers"></datalist>
       <br>
       <button class="btn" type="submit">حفظ</button>
       <button class="btn sec" type="button" onclick="resetForm()">جديد / إلغاء التعديل</button>
@@ -136,6 +137,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
     <div class="row noprint">
       <div style="flex:2;min-width:200px"><label>بحث (كود، عميل، شركة، سريال، براند، مهندس، عطل...)</label><input id="q" oninput="renderList()"></div>
       <div><label>نوع الجهاز</label><select id="ftype" onchange="renderList()"></select></div>
+      <div><label>الفرع</label><select id="fbranch" onchange="renderList()"><option value="">كل الفروع</option></select></div>
       <button class="btn sec" onclick="loadAll()">تحديث</button>
       <button class="btn" onclick="exportCSV(filtered(), 'records')">تصدير Excel</button>
     </div>
@@ -150,6 +152,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
     <div class="row noprint">
       <div><label>نوع التقرير</label>
         <select id="rtype" onchange="runReport()"><option value="daily">يومي</option><option value="weekly">أسبوعي (السبت – الجمعة)</option><option value="monthly">شهري</option></select></div>
+      <div><label>الفرع</label><select id="rbranch" onchange="runReport()"><option value="">كل الفروع</option></select></div>
       <div><label>التاريخ (أي يوم داخل الفترة)</label><input id="rdate" type="date" onchange="runReport()"></div>
       <button class="btn sec" onclick="shiftReport(-1)">◀ السابق</button>
       <button class="btn sec" onclick="shiftReport(1)">التالي ▶</button>
@@ -166,7 +169,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
     <h3>استيراد بيانات من Excel</h3>
     <ol>
       <li>احفظ الشيت كـ <b>CSV UTF-8</b> (File ← Save As).</li>
-      <li>الصف الأول أسماء الأعمدة: اسم العميل، اسم الشركه، نوع الجهاز، البراند، لون الجهاز، قدرة الجهاز، السريال نمبر، الحالة، العطل، مهندس الصيانة، المكونات المطلوبة، تاريخ الاستلام، تاريخ التسليم، قيمة الصيانة.</li>
+      <li>الصف الأول أسماء الأعمدة: الفرع، اسم العميل، اسم الشركه، نوع الجهاز، البراند، لون الجهاز، قدرة الجهاز، السريال نمبر، الحالة، العطل، مهندس الصيانة، المكونات المطلوبة، تاريخ الاستلام، تاريخ التسليم، قيمة الصيانة.</li>
       <li>الكود يتولد تلقائياً (لا تضعه في الملف). السجلات تُرتَّب بتاريخ الاستلام قبل الإدخال.</li>
     </ol>
     <div id="impMsg"></div>
@@ -207,11 +210,11 @@ const NEXT = {
   'رفض العميل':['تم التسليم'],
   'تم التسليم':[]
 };
-const FIELDS = ['code','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','fault_reason','engineer','required_components','received_date','delivery_date','maintenance_cost'];
+const FIELDS = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','fault_reason','engineer','required_components','received_date','delivery_date','maintenance_cost'];
 const SAVE_FIELDS = FIELDS.filter(k => k!=='code');
 const vf = () => FIELDS.filter(k => k!=='maintenance_cost' || IS_ADMIN);   // الحقول المرئية حسب الصلاحية
-const HEAD = {code:'الكود',customer_name:'اسم العميل',company_name:'اسم الشركة',device_type:'نوع الجهاز',brand:'البراند',color:'لون الجهاز',capacity:'قدرة الجهاز',serial_number:'السريال نمبر',status:'الحالة',fault_reason:'العطل / سبب العطل',engineer:'مهندس الصيانة',required_components:'المكونات المطلوبة',received_date:'تاريخ الاستلام',delivery_date:'تاريخ التسليم',maintenance_cost:'قيمة الصيانة'};
-const IMPORT_MAP = {'اسم العميل':'customer_name','العميل':'customer_name','اسم الشركه':'company_name','اسم الشركة':'company_name','الشركة':'company_name','الشركه':'company_name','نوع الجهاز':'device_type','البراند':'brand','لون الجهاز':'color','اللون':'color','قدرة الجهاز':'capacity','القدرة':'capacity','السريال نمبر':'serial_number','السريال':'serial_number','الحالة':'status','الحاله':'status','العطل / سبب العطل':'fault_reason','العطل':'fault_reason','سبب العطل':'fault_reason','مهندس الصيانة':'engineer','مهندس الصيانة المسئول':'engineer','المكونات المطلوبة':'required_components','المكونات المطلوبة للصيانة':'required_components','تاريخ الاستلام':'received_date','تاريخ الوارد':'received_date','تاريخ التسليم':'delivery_date','تاريخ التسليم للعميل':'delivery_date','قيمة الصيانة':'maintenance_cost'};
+const HEAD = {code:'الكود',branch:'الفرع',customer_name:'اسم العميل',company_name:'اسم الشركة',device_type:'نوع الجهاز',brand:'البراند',color:'لون الجهاز',capacity:'قدرة الجهاز',serial_number:'السريال نمبر',status:'الحالة',fault_reason:'العطل / سبب العطل',engineer:'مهندس الصيانة',required_components:'المكونات المطلوبة',received_date:'تاريخ الاستلام',delivery_date:'تاريخ التسليم',maintenance_cost:'قيمة الصيانة'};
+const IMPORT_MAP = {'الفرع':'branch','فرع':'branch','اسم العميل':'customer_name','العميل':'customer_name','اسم الشركه':'company_name','اسم الشركة':'company_name','الشركة':'company_name','الشركه':'company_name','نوع الجهاز':'device_type','البراند':'brand','لون الجهاز':'color','اللون':'color','قدرة الجهاز':'capacity','القدرة':'capacity','السريال نمبر':'serial_number','السريال':'serial_number','الحالة':'status','الحاله':'status','العطل / سبب العطل':'fault_reason','العطل':'fault_reason','سبب العطل':'fault_reason','مهندس الصيانة':'engineer','مهندس الصيانة المسئول':'engineer','المكونات المطلوبة':'required_components','المكونات المطلوبة للصيانة':'required_components','تاريخ الاستلام':'received_date','تاريخ الوارد':'received_date','تاريخ التسليم':'delivery_date','تاريخ التسليم للعميل':'delivery_date','قيمة الصيانة':'maintenance_cost'};
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -330,6 +333,9 @@ async function loadAll(){
   const opts = k => [...new Set(all.map(r=>r[k]).filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('');
   $('customers').innerHTML = opts('customer_name'); $('companies').innerHTML = opts('company_name');
   $('brands').innerHTML = opts('brand'); $('colors').innerHTML = opts('color'); $('engineers').innerHTML = opts('engineer');
+  $('branches').innerHTML = opts('branch');
+  const fillSel = id => { const el = $(id), cur = el.value; el.innerHTML = '<option value="">كل الفروع</option>' + [...new Set(all.map(r=>r.branch).filter(Boolean))].sort().map(v=>`<option>${esc(v)}</option>`).join(''); el.value = cur; };
+  fillSel('fbranch'); fillSel('rbranch');
   renderList();
   if(!$('tab-report').classList.contains('hidden')) runReport();
 }
@@ -408,10 +414,11 @@ async function delRec(id){
 
 /* ---------- السجل ---------- */
 function filtered(){
-  const q = $('q').value.trim().toLowerCase(), t = $('ftype').value;
+  const q = $('q').value.trim().toLowerCase(), t = $('ftype').value, b = $('fbranch').value;
   return all.filter(r =>
     (chipSel==='' || (chipSel==='__open' ? r.status!=='تم التسليم' : r.status===chipSel)) &&
     (!t || r.device_type===t) &&
+    (!b || r.branch===b) &&
     (!q || FIELDS.some(k => String(r[k]??'').toLowerCase().includes(q))));
 }
 function renderChips(){
@@ -425,7 +432,7 @@ function renderList(){
   renderChips();
   const rows = filtered();
   $('listCount').textContent = `عدد السجلات: ${rows.length} من ${all.length}`;
-  const cols = ['code','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
+  const cols = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
   $('listTable').innerHTML = '<tr><th class="noprint"></th>'+cols.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>' +
     rows.slice(0,500).map(r => {
       const n = (NEXT[r.status]||[]);
@@ -467,18 +474,21 @@ function miniTable(title, g, top){
   return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th>${IS_ADMIN?'<th>القيمة</th>':''}</tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td>${IS_ADMIN?`<td>${money(v.total)}</td>`:''}</tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
 }
 function detailTable(rows){
-  const cols = ['code','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
+  const cols = ['code','branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
   return `<div class="tw"><table><tr>${cols.map(k=>`<th>${HEAD[k]}</th>`).join('')}</tr>`+
     (rows.map(r=>'<tr>'+cols.map(k=>'<td>'+(k==='status'?badge(r[k]):k==='maintenance_cost'?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>').join('') || `<tr><td colspan="${cols.length}">لا توجد سجلات في هذه الفترة</td></tr>`)+'</table></div>';
 }
 function runReport(){
-  const [from, to, title] = rangeFor($('rtype').value, $('rdate').value || today());
+  const [from, to, title0] = rangeFor($('rtype').value, $('rdate').value || today());
+  const rb = $('rbranch').value;                       // فلتر الفرع (فارغ = كل الفروع)
+  const base = rb ? all.filter(r => r.branch===rb) : all;
+  const title = title0 + (rb ? ' — الفرع: '+rb : ' — كل الفروع');
   const bycode = (a,b) => String(a.code||'').localeCompare(String(b.code||''));
-  const recv  = all.filter(r => r.received_date >= from && r.received_date <= to).sort(bycode);
-  const deliv = all.filter(r => r.status==='تم التسليم' && r.delivery_date && r.delivery_date >= from && r.delivery_date <= to).sort(bycode);
+  const recv  = base.filter(r => r.received_date >= from && r.received_date <= to).sort(bycode);
+  const deliv = base.filter(r => r.status==='تم التسليم' && r.delivery_date && r.delivery_date >= from && r.delivery_date <= to).sort(bycode);
   const revenue = deliv.reduce((s,r)=>s+Number(r.maintenance_cost||0),0);
-  const cnt = s => all.filter(r => r.status===s).length;
-  const openN = all.filter(r => r.status!=='تم التسليم').length;
+  const cnt = s => base.filter(r => r.status===s).length;
+  const openN = base.filter(r => r.status!=='تم التسليم').length;
   const seen = new Map(); recv.concat(deliv).forEach(r => seen.set(r.id, r)); reportRows = [...seen.values()];
   $('reportBox').innerHTML = `
     <div class="rhead"><h3 style="margin:0">${title}</h3><img src="${window.LOGO}" alt="Solar Gate"></div>
@@ -487,7 +497,7 @@ function runReport(){
       <div class="stat">أجهزة مسلّمة في الفترة<b>${deliv.length}</b></div>
       ${IS_ADMIN ? `<div class="stat">قيمة صيانة المسلّم<b>${money(revenue)}</b></div>` : ''}
     </div>
-    <h4>الوضع الحالي (لكل الأجهزة)</h4>
+    <h4>الوضع الحالي (${rb ? 'لأجهزة هذا الفرع' : 'لكل الأجهزة'})</h4>
     <div class="stats">
       <div class="stat snap">قيد العمل<b>${openN}</b></div>
       <div class="stat snap">فحص<b>${cnt('فحص')}</b></div>
@@ -497,6 +507,7 @@ function runReport(){
       <div class="stat snap">رفض العميل (لم يُسلَّم)<b>${cnt('رفض العميل')}</b></div>
     </div>
     <div class="grid">
+      ${rb ? '' : `<div>${miniTable('المستلم حسب الفرع', groupBy(recv, r=>r.branch))}</div><div>${miniTable('المسلّم حسب الفرع', groupBy(deliv, r=>r.branch))}</div>`}
       <div>${miniTable('المستلم حسب نوع الجهاز', groupBy(recv, r=>r.device_type))}</div>
       <div>${miniTable('المستلم حسب البراند', groupBy(recv, r=>r.brand), 10)}</div>
       <div>${miniTable('المستلم حسب العميل / الشركة', groupBy(recv, who), 10)}</div>
@@ -559,14 +570,14 @@ function previewCSV(e){
       if(!o.company_name && !o.customer_name){ skipped++; return; }
       const dt = normType(o.device_type); if(o.device_type && !dt) badType++;
       const st = normStatus(o.status);
-      importRows.push({ customer_name:o.customer_name||null, company_name:o.company_name||null, device_type:dt, brand:o.brand||null, color:o.color||null,
+      importRows.push({ branch:o.branch||null, customer_name:o.customer_name||null, company_name:o.company_name||null, device_type:dt, brand:o.brand||null, color:o.color||null,
         capacity:o.capacity||null, serial_number:o.serial_number||null, status:st, fault_reason:o.fault_reason||null, engineer:o.engineer||null,
         required_components:o.required_components||null, received_date:normDate(o.received_date)||today(),
         delivery_date:normDate(o.delivery_date) || (st==='تم التسليم'?today():null), maintenance_cost:num(o.maintenance_cost) });
     });
     importRows.sort((a,b)=>a.received_date.localeCompare(b.received_date));
     show($('impMsg'),'ok',`جاهز للاستيراد: ${importRows.length} سجل (تخطي ${skipped} بدون عميل/شركة، ${badType} بنوع جهاز غير معروف سيُترك فارغاً)`);
-    const pc = ['customer_name','company_name','device_type','brand','capacity','serial_number','status','received_date','maintenance_cost'];
+    const pc = ['branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','received_date','maintenance_cost'];
     $('impPreview').innerHTML = '<div class="tw" style="max-height:260px"><table><tr>'+pc.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>'+
       importRows.slice(0,8).map(r=>'<tr>'+pc.map(k=>`<td>${esc(r[k])}</td>`).join('')+'</tr>').join('')+'</table></div><p>معاينة أول 8 صفوف</p>';
     $('impBtn').classList.remove('hidden');
