@@ -48,7 +48,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
 #login{max-width:380px;margin:80px auto}
 .badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:12px;white-space:nowrap}
 .s0{background:#eceef5;color:#151a40}.s1{background:#e3efff;color:#0b4aa8}.s2{background:#fff3d6;color:#8a5a00}
-.s3{background:#e2f5e9;color:#1a7f4b}.s4{background:#ffe9d6;color:#a4460a}.s5{background:#fde8e8;color:#c62828}.s6{background:#e6e9ee;color:#3a4452}
+.s3{background:#e2f5e9;color:#1a7f4b}.s4{background:#ffe9d6;color:#a4460a}.s5{background:#d8f3ee;color:#0f6b5e}.s6{background:#fde8e8;color:#c62828}.s7{background:#e6e9ee;color:#3a4452}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:20px;padding:6px 12px;cursor:pointer;font:inherit;color:var(--ink)}
 .chip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
@@ -57,7 +57,40 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
 .step.cur{background:var(--pri);color:#fff;border:1px solid var(--pri)}
 .step.nxt{border:1px solid var(--acc);color:var(--ink)}
 .hist{margin:6px 0 0;padding:0 18px 0 0;font-size:13px;color:var(--mut)}
-@media print{header,.noprint{display:none!important}body{background:#fff}.card{border:0;padding:0}.tw{max-height:none;overflow:visible}}
+.checks{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.checks label{display:flex;gap:6px;align-items:center;margin:0;color:var(--ink);font-size:14px}
+.checks input{width:auto}
+.prow{display:flex;gap:8px;margin-bottom:6px}.prow .pname{flex:1}.prow .pqty{width:90px}
+.fin{background:#f6f8fc;border:1px dashed #c9d2e3;border-radius:10px;padding:10px}
+/* ورقة تقرير الصيانة */
+.mr-sheet{max-width:794px;margin:0 auto 16px;background:#fff;border:1px solid #555;color:#111;font-size:14px}
+.mr-top{display:flex;align-items:center;justify-content:space-between;padding:14px 24px}
+.mr-top img{height:54px;width:auto}
+.mr-ar{font-size:30px;font-weight:800;color:#f2b31f}
+.mr-band1{background:#151a40;color:#fff;text-align:center;font-weight:700;font-size:17px;padding:9px}
+.mr-band2{background:#f2b31f;color:#151a40;text-align:center;font-weight:800;font-size:20px;padding:8px;letter-spacing:6px}
+.mr-body{padding:18px 16px 4px}
+.mr-sheet table{border-collapse:collapse;width:100%;font-size:14px}
+.mr-sheet th,.mr-sheet td{border:1px solid #444;padding:7px 9px;text-align:center;vertical-align:middle;position:static;white-space:normal}
+.mr-sheet th,.mr-sheet td.lbl{background:#eee;font-weight:700}
+.mr-sheet td.val{font-weight:600;color:#1a2a8a}
+.mr-two{display:grid;grid-template-columns:55% 45%;margin-top:16px}
+.mr-box{border:1px solid #444}.mr-box+.mr-box{border-right:0}
+.mr-box h5{margin:0;background:#eee;border-bottom:1px solid #444;text-align:center;padding:7px;font-size:14px}
+.mr-box table td,.mr-box table th{border-top:0}
+.mr-box table tr:first-child td{border-top:0}
+.mr-fault{min-height:118px;padding:10px;color:#1a2a8a;font-weight:600;white-space:pre-wrap}
+.mr-sheet td.cl{font-weight:700;text-align:left;width:27%;background:#fff}
+.mr-sheet td.ck{color:#1a2a8a;font-size:18px;font-weight:700;width:23%;height:34px}
+.mr-parts{margin-top:16px}
+.mr-sheet td.mr-notes{vertical-align:top;text-align:right;color:#1a2a8a;font-weight:600}
+.mr-sheet td.mr-qty{width:11%;color:#1a2a8a;font-weight:700;height:32px}
+.mr-sheet td.mr-part{width:34%;color:#1a2a8a;font-weight:700;direction:ltr;text-align:left}
+.mr-sign{display:flex;justify-content:space-between;padding:20px 22px 18px;font-weight:700}
+.mr-sign span.line{display:inline-block;min-width:160px;border-bottom:1px solid #444;color:#1a2a8a}
+.mr-foot{background:#14141c;color:#fff;text-align:center;padding:12px;font-weight:700;margin:6px 16px 16px}
+@page{size:A4;margin:10mm}
+@media print{header,.noprint{display:none!important}body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}main{margin:0;max-width:none;padding:0}.card{border:0;padding:0}.tw{max-height:none;overflow:visible}.mr-sheet{margin:0 auto;max-width:none}}
 </style>
 </head>
 <body>
@@ -80,6 +113,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
     <button data-tab="add" class="active">تسجيل جهاز</button>
     <button data-tab="list">السجل</button>
     <button data-tab="report">التقارير</button>
+    <button data-tab="mr">تقرير الصيانة</button>
     <button data-tab="import">استيراد من Excel</button>
     <button data-tab="users">المستخدمون</button>
   </nav>
@@ -108,9 +142,15 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
         <div><label>مهندس الصيانة المسئول</label><input id="engineer" list="engineers"></div>
         <div><label>تاريخ الاستلام *</label><input id="received_date" type="date" required></div>
         <div><label>تاريخ التسليم للعميل</label><input id="delivery_date" type="date"></div>
-        <div id="costBox"><label>قيمة الصيانة</label><input id="maintenance_cost" type="number" step="0.01" min="0" value="0"></div>
+        <div id="costBox" class="full fin">
+          <div class="grid">
+            <div><label>التكلفة</label><input id="cost" type="number" step="0.01" min="0" value="0"></div>
+            <div><label>سعر الصيانة</label><input id="price" type="number" step="0.01" min="0" value="0"></div>
+            <div><label>الربح (تلقائي = السعر − التكلفة)</label><input id="profit" readonly value="0.00"></div>
+          </div>
+        </div>
         <div class="full">
-          <label>الحالة (المسار: تم الاستلام ← فحص ← بانتظار رد العميل ← صيانة أو رفض ← تم التسليم)</label>
+          <label>الحالة (المسار: تم الاستلام ← فحص ← بانتظار رد العميل ← جاهز للصيانة / واقف على قطع غيار ← تمت الصيانة ← تم التسليم، أو رفض العميل ← تم التسليم)</label>
           <div class="flow" id="flow"></div>
           <div class="row">
             <div style="min-width:240px;flex:1"><select id="status"></select></div>
@@ -118,7 +158,14 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
           </div>
         </div>
         <div class="full"><label>العطل / سبب العطل</label><textarea id="fault_reason"></textarea></div>
-        <div class="full"><label>المكونات المطلوبة للصيانة</label><textarea id="required_components"></textarea></div>
+        <div class="full">
+          <label>قطع الغيار / المكونات المطلوبة للصيانة (الاسم والعدد)</label>
+          <div id="partsBox"></div>
+          <button type="button" class="btn sec sm" onclick="addPart()">+ إضافة قطعة</button>
+          <input type="hidden" id="required_components">
+        </div>
+        <div class="full"><label>بيان الصيانة (ما تم عمله)</label><textarea id="maintenance_notes"></textarea></div>
+        <div class="full"><label>التجربه النهائيه للجهاز</label><div class="checks" id="checksBox"></div></div>
         <div class="full hidden" id="histBox"><label>سجل الحالات</label><ul class="hist" id="hist"></ul></div>
       </div>
       <datalist id="branches"></datalist><datalist id="customers"></datalist><datalist id="companies"></datalist><datalist id="brands"></datalist><datalist id="colors"></datalist><datalist id="engineers"></datalist>
@@ -163,13 +210,28 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
   <div class="card" id="reportBox"></div>
 </section>
 
+<!-- تقرير الصيانة (ورقة الجهاز) -->
+<section id="tab-mr" class="hidden">
+  <div class="card noprint">
+    <div class="row">
+      <div style="flex:2;min-width:260px"><label>ابحث عن الجهاز (الكود أو السريال أو اسم العميل)</label>
+        <input id="mrq" list="mrlist" oninput="mrFind(false)" onchange="mrFind(true)" placeholder="مثال: SG-00001"></div>
+      <button class="btn" onclick="window.print()">طباعة / PDF</button>
+    </div>
+    <datalist id="mrlist"></datalist>
+    <div id="mrMsg" style="margin-top:8px"></div>
+    <p style="color:var(--mut);margin:6px 0 0">يمكنك أيضاً فتح التقرير من زر "تقرير" بجانب أي جهاز في السجل.</p>
+  </div>
+  <div id="mrSheet"></div>
+</section>
+
 <!-- استيراد -->
 <section id="tab-import" class="hidden">
   <div class="card">
     <h3>استيراد بيانات من Excel</h3>
     <ol>
       <li>احفظ الشيت كـ <b>CSV UTF-8</b> (File ← Save As).</li>
-      <li>الصف الأول أسماء الأعمدة: الفرع، اسم العميل، اسم الشركه، نوع الجهاز، البراند، لون الجهاز، قدرة الجهاز، السريال نمبر، الحالة، العطل، مهندس الصيانة، المكونات المطلوبة، تاريخ الاستلام، تاريخ التسليم، قيمة الصيانة.</li>
+      <li>الصف الأول أسماء الأعمدة: الفرع، اسم العميل، اسم الشركه، نوع الجهاز، البراند، لون الجهاز، قدرة الجهاز، السريال نمبر، الحالة، العطل، مهندس الصيانة، المكونات المطلوبة، تاريخ الاستلام، تاريخ التسليم، التكلفة، سعر الصيانة، بيان الصيانة.</li>
       <li>الكود يتولد تلقائياً (لا تضعه في الملف). السجلات تُرتَّب بتاريخ الاستلام قبل الإدخال.</li>
     </ol>
     <div id="impMsg"></div>
@@ -184,7 +246,7 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
 <section id="tab-users" class="hidden">
   <div class="card">
     <h3>المستخدمون والصلاحيات</h3>
-    <p style="color:var(--mut)"><b>مدير</b>: كل الصلاحيات (إضافة التكلفة ورؤيتها، التقارير بالقيم، الحذف، الاستيراد، إدارة المستخدمين). <b>موظف</b>: يسجّل الأجهزة ويعدّلها ويرى التقارير بدون أي أرقام تكلفة، ولا يحذف.<br>
+    <p style="color:var(--mut)"><b>مدير</b>: كل الصلاحيات (التكلفة والسعر والربح، التقارير بالقيم، الحذف، الاستيراد، إدارة المستخدمين). <b>موظف</b>: يسجّل الأجهزة ويعدّلها ويرى التقارير وورقة تقرير الصيانة بدون أي تكلفة أو سعر أو ربح، ولا يحذف.<br>
     لإضافة مستخدم جديد: Supabase ثم Authentication ثم Users ثم Add user (يظهر هنا تلقائياً كـ "موظف").</p>
     <div id="usersMsg"></div>
     <div class="tw"><table id="usersTable"></table></div>
@@ -196,31 +258,38 @@ th{background:#eef2f7;position:sticky;top:0;white-space:nowrap}
 
 <script>
 const $ = id => document.getElementById(id);
-let sb, all = [], reportRows = [], importRows = [], curStatus = null, chipSel = '', IS_ADMIN = false, ME = null, authOn = null;
+let sb, all = [], reportRows = [], importRows = [], curStatus = null, chipSel = '', IS_ADMIN = false, ME = null, authOn = null, mrId = null;
 
 /* ---------- إعدادات النظام (عدّلها من هنا فقط) ---------- */
 const TYPES = ['Solar Pump','Off_Grid','On_Grid','Hybrid','Industrial'];
-const STATUSES = ['تم الاستلام','فحص','بانتظار رد العميل','جاهز للصيانة','واقف على قطع غيار','رفض العميل','تم التسليم'];
+const STATUSES = ['تم الاستلام','فحص','بانتظار رد العميل','جاهز للصيانة','واقف على قطع غيار','تمت الصيانة','رفض العميل','تم التسليم'];
 const NEXT = {
   'تم الاستلام':['فحص'],
   'فحص':['بانتظار رد العميل'],
   'بانتظار رد العميل':['جاهز للصيانة','واقف على قطع غيار','رفض العميل'],
-  'جاهز للصيانة':['واقف على قطع غيار','تم التسليم'],
-  'واقف على قطع غيار':['جاهز للصيانة'],
+  'جاهز للصيانة':['واقف على قطع غيار','تمت الصيانة'],
+  'واقف على قطع غيار':['جاهز للصيانة','تمت الصيانة'],
+  'تمت الصيانة':['تم التسليم'],
   'رفض العميل':['تم التسليم'],
   'تم التسليم':[]
 };
-const FIELDS = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','fault_reason','engineer','required_components','received_date','delivery_date','maintenance_cost'];
-const SAVE_FIELDS = FIELDS.filter(k => k!=='code');
-const vf = () => FIELDS.filter(k => k!=='maintenance_cost' || IS_ADMIN);   // الحقول المرئية حسب الصلاحية
-const HEAD = {code:'الكود',branch:'الفرع',customer_name:'اسم العميل',company_name:'اسم الشركة',device_type:'نوع الجهاز',brand:'البراند',color:'لون الجهاز',capacity:'قدرة الجهاز',serial_number:'السريال نمبر',status:'الحالة',fault_reason:'العطل / سبب العطل',engineer:'مهندس الصيانة',required_components:'المكونات المطلوبة',received_date:'تاريخ الاستلام',delivery_date:'تاريخ التسليم',maintenance_cost:'قيمة الصيانة'};
-const IMPORT_MAP = {'الفرع':'branch','فرع':'branch','اسم العميل':'customer_name','العميل':'customer_name','اسم الشركه':'company_name','اسم الشركة':'company_name','الشركة':'company_name','الشركه':'company_name','نوع الجهاز':'device_type','البراند':'brand','لون الجهاز':'color','اللون':'color','قدرة الجهاز':'capacity','القدرة':'capacity','السريال نمبر':'serial_number','السريال':'serial_number','الحالة':'status','الحاله':'status','العطل / سبب العطل':'fault_reason','العطل':'fault_reason','سبب العطل':'fault_reason','مهندس الصيانة':'engineer','مهندس الصيانة المسئول':'engineer','المكونات المطلوبة':'required_components','المكونات المطلوبة للصيانة':'required_components','تاريخ الاستلام':'received_date','تاريخ الوارد':'received_date','تاريخ التسليم':'delivery_date','تاريخ التسليم للعميل':'delivery_date','قيمة الصيانة':'maintenance_cost'};
+const FIELDS = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','fault_reason','engineer','required_components','maintenance_notes','received_date','delivery_date','cost','price','profit'];
+const FIN = ['cost','price','profit'];   // الحقول المالية: للمدير فقط
+const SAVE_FIELDS = FIELDS.filter(k => k!=='code' && !FIN.includes(k));
+const vf = () => FIELDS.filter(k => !FIN.includes(k) || IS_ADMIN);   // الحقول المرئية حسب الصلاحية
+const HEAD = {code:'الكود',branch:'الفرع',customer_name:'اسم العميل',company_name:'اسم الشركة',device_type:'نوع الجهاز',brand:'البراند',color:'لون الجهاز',capacity:'قدرة الجهاز',serial_number:'السريال نمبر',status:'الحالة',fault_reason:'العطل / سبب العطل',engineer:'مهندس الصيانة',required_components:'قطع الغيار / المكونات المطلوبة',maintenance_notes:'بيان الصيانة',received_date:'تاريخ الاستلام',delivery_date:'تاريخ التسليم',cost:'التكلفة',price:'سعر الصيانة',profit:'الربح'};
+const IMPORT_MAP = {'الفرع':'branch','فرع':'branch','اسم العميل':'customer_name','العميل':'customer_name','اسم الشركه':'company_name','اسم الشركة':'company_name','الشركة':'company_name','الشركه':'company_name','نوع الجهاز':'device_type','البراند':'brand','لون الجهاز':'color','اللون':'color','قدرة الجهاز':'capacity','القدرة':'capacity','السريال نمبر':'serial_number','السريال':'serial_number','الحالة':'status','الحاله':'status','العطل / سبب العطل':'fault_reason','العطل':'fault_reason','سبب العطل':'fault_reason','مهندس الصيانة':'engineer','مهندس الصيانة المسئول':'engineer','المكونات المطلوبة':'required_components','المكونات المطلوبة للصيانة':'required_components','تاريخ الاستلام':'received_date','تاريخ الوارد':'received_date','تاريخ التسليم':'delivery_date','تاريخ التسليم للعميل':'delivery_date','قيمة الصيانة':'price','سعر الصيانة':'price','السعر':'price','التكلفة':'cost','بيان الصيانة':'maintenance_notes'};
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money = n => Number(n||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 const iso = d => d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 const today = () => iso(new Date());
-const badge = s => `<span class="badge s${Math.max(0,STATUSES.indexOf(s))}">${esc(s)}</span>`;
+const STATUS_CLASS = {'تم الاستلام':0,'فحص':1,'بانتظار رد العميل':2,'جاهز للصيانة':3,'واقف على قطع غيار':4,'تمت الصيانة':5,'رفض العميل':6,'تم التسليم':7};
+const badge = s => `<span class="badge s${STATUS_CLASS[s] ?? 0}">${esc(s)}</span>`;
+const CHECKS = [['pv','PV'],['ac','AC'],['load','Load'],['battery','Battery'],['vibration','Vibration'],['screws','Screws'],['video','Video'],['label','Label']];
+const CHECK_ROWS = [['pv','vibration'],['ac','screws'],['load','video'],['battery','label']];   // ترتيب الورقة المطبوعة
+const COMPANY = { ar:'سولار جيت', tag:'Renewable Energy Services', address:'المريوطيه - فيصل - الجيزه' };
+const fmtD = d => d ? String(d).split('-').reverse().join('/') : '';
 const who = r => [r.customer_name, r.company_name].filter(Boolean).join(' - ');
 function show(el, cls, text){ el.innerHTML = text ? `<div class="msg ${cls}">${esc(text)}</div>` : ''; }
 
@@ -234,6 +303,8 @@ function show(el, cls, text){ el.innerHTML = text ? `<div class="msg ${cls}">${e
   $('device_type').innerHTML = '<option value="">اختر نوع الجهاز...</option>' + TYPES.map(t=>`<option>${esc(t)}</option>`).join('');
   $('ftype').innerHTML = '<option value="">الكل</option>' + TYPES.map(t=>`<option>${esc(t)}</option>`).join('');
   $('anyst').onchange = () => fillStatusSelect(curStatus, $('anyst').checked);
+  $('checksBox').innerHTML = CHECKS.map(([k,l]) => `<label><input type="checkbox" id="chk_${k}"> ${l}</label>`).join('') + '<button type="button" class="btn sec sm" onclick="setAllChecks()">تحديد الكل</button>';
+  ['cost','price'].forEach(id => $(id).addEventListener('input', calcProfit));
   $('status').onchange = () => { if($('status').value==='تم التسليم' && !$('delivery_date').value) $('delivery_date').value = today(); };
   const { data:{ session } } = await sb.auth.getSession();
   setAuth(!!session);
@@ -263,8 +334,8 @@ async function loadRole(){
   document.querySelector('nav button[data-tab=users]').classList.toggle('hidden', !IS_ADMIN);
   $('who').textContent = (user?.email || '') + ' — ' + (IS_ADMIN ? 'مدير' : 'موظف');
 }
-async function saveCost(jobId, cost){
-  const { error } = await sb.from('job_costs').upsert({ job_id: jobId, maintenance_cost: cost });
+async function saveCost(jobId, cost, price){
+  const { error } = await sb.from('job_costs').upsert({ job_id: jobId, cost, price });
   return error;
 }
 async function loadUsers(){
@@ -272,7 +343,7 @@ async function loadUsers(){
   if(error){ show($('usersMsg'),'err','تعذر تحميل المستخدمين: '+error.message); return; }
   $('usersTable').innerHTML = '<tr><th>البريد</th><th>الصلاحية</th></tr>' + (data||[]).map(u =>
     `<tr><td>${esc(u.email)}</td><td><select ${u.id===ME?'disabled title="لا يمكنك تغيير صلاحيتك"':''} onchange="setRole('${esc(u.id)}',this.value)">
-      <option value="staff" ${u.role==='staff'?'selected':''}>موظف (بدون تكلفة)</option>
+      <option value="staff" ${u.role==='staff'?'selected':''}>موظف (بدون تكلفة/سعر/ربح)</option>
       <option value="admin" ${u.role==='admin'?'selected':''}>مدير (كل الصلاحيات)</option></select></td></tr>`).join('');
 }
 async function setRole(id, role){
@@ -297,7 +368,7 @@ async function doLogout(){ await sb.auth.signOut(); }
 
 function tab(name){
   if((name==='import' || name==='users') && !IS_ADMIN) name = 'add';
-  ['add','list','report','import','users'].forEach(t => $('tab-'+t).classList.toggle('hidden', t!==name));
+  ['add','list','report','mr','import','users'].forEach(t => $('tab-'+t).classList.toggle('hidden', t!==name));
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab===name));
   if(name==='list') renderList();
   if(name==='report') runReport();
@@ -321,13 +392,13 @@ async function loadAll(){
   if(IS_ADMIN){                        // التكاليف تُجلب للمدير فقط (جدول محمي)
     const cm = {}; let f = 0;
     while(true){
-      const { data, error } = await sb.from('job_costs').select('job_id,maintenance_cost').range(f, f+999);
-      if(error){ show($('formMsg'),'err','تعذر تحميل التكاليف: '+error.message+' — شغّل permissions.sql في Supabase.'); break; }
-      data.forEach(c => cm[c.job_id] = c.maintenance_cost);
+      const { data, error } = await sb.from('job_costs').select('job_id,cost,price,profit').range(f, f+999);
+      if(error){ show($('formMsg'),'err','تعذر تحميل التكاليف: '+error.message+' — شغّل update_v4.sql في Supabase.'); break; }
+      data.forEach(c => cm[c.job_id] = c);
       if(data.length < 1000) break;
       f += 1000;
     }
-    rows.forEach(r => r.maintenance_cost = cm[r.id] ?? 0);
+    rows.forEach(r => { const c = cm[r.id]; r.cost = c ? Number(c.cost) : 0; r.price = c ? Number(c.price) : 0; r.profit = c ? Number(c.profit) : 0; });
   }
   all = rows;
   const opts = k => [...new Set(all.map(r=>r[k]).filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('');
@@ -336,6 +407,8 @@ async function loadAll(){
   $('branches').innerHTML = opts('branch');
   const fillSel = id => { const el = $(id), cur = el.value; el.innerHTML = '<option value="">كل الفروع</option>' + [...new Set(all.map(r=>r.branch).filter(Boolean))].sort().map(v=>`<option>${esc(v)}</option>`).join(''); el.value = cur; };
   fillSel('fbranch'); fillSel('rbranch');
+  $('mrlist').innerHTML = all.slice(0,1000).map(r => `<option value="${esc(r.code)}">${esc(who(r)+' — '+(r.serial_number||''))}</option>`).join('');
+  if(mrId){ const mr = all.find(x => x.id===mrId); if(mr && !$('tab-mr').classList.contains('hidden')) renderMR(mr); }
   renderList();
   if(!$('tab-report').classList.contains('hidden')) runReport();
 }
@@ -353,7 +426,8 @@ function fillStatusSelect(cur, any){
 /* ---------- التسجيل والتعديل ---------- */
 function resetForm(){
   $('f').reset(); $('id').value=''; $('code').value=''; curStatus = null;
-  $('received_date').value = today(); $('maintenance_cost').value = 0; $('anyst').checked = false;
+  $('received_date').value = today(); $('cost').value = 0; $('price').value = 0; $('anyst').checked = false;
+  setParts([]); setChecks({}); calcProfit();
   $('formTitle').textContent = 'تسجيل جهاز جديد';
   $('anyRow').classList.add('hidden'); $('histBox').classList.add('hidden');
   fillStatusSelect(null, false); show($('formMsg'),'','');
@@ -361,8 +435,11 @@ function resetForm(){
 async function saveRecord(e){
   e.preventDefault();
   const rec = {};
-  SAVE_FIELDS.filter(k => k!=='maintenance_cost').forEach(k => { const v = $(k).value.trim(); rec[k] = v===''?null:v; });
-  const cost = Number($('maintenance_cost').value||0);
+  const parts = collectParts();
+  $('required_components').value = partsToText(parts);
+  SAVE_FIELDS.forEach(k => { const v = $(k).value.trim(); rec[k] = v===''?null:v; });
+  rec.parts = parts; rec.final_checks = collectChecks();
+  const cost = Number($('cost').value||0), price = Number($('price').value||0);
   rec.status = $('status').value;
   if(!rec.customer_name && !rec.company_name){ show($('formMsg'),'err','اكتب اسم العميل أو اسم الشركة على الأقل'); return; }
   if(!rec.device_type){ show($('formMsg'),'err','اختر نوع الجهاز'); return; }
@@ -374,14 +451,14 @@ async function saveRecord(e){
   }
   if(id){
     const { error } = await sb.from('maintenance_jobs').update(rec).eq('id', id);
-    if(error){ show($('formMsg'),'err','تعذر الحفظ: '+error.message); return; }
-    const ce = IS_ADMIN ? await saveCost(id, cost) : null;
+    if(error){ show($('formMsg'),'err',dbErr(error)); return; }
+    const ce = IS_ADMIN ? await saveCost(id, cost, price) : null;
     resetForm(); await loadAll(); tab('list');
     show($('listMsg'), ce?'err':'ok', ce ? 'تم حفظ الجهاز لكن تعذر حفظ التكلفة: '+ce.message : 'تم تحديث السجل');
   } else {
     const { data, error } = await sb.from('maintenance_jobs').insert(rec).select('id,code').single();
-    if(error){ show($('formMsg'),'err','تعذر الحفظ: '+error.message); return; }
-    const ce = IS_ADMIN && data ? await saveCost(data.id, cost) : null;
+    if(error){ show($('formMsg'),'err',dbErr(error)); return; }
+    const ce = IS_ADMIN && data ? await saveCost(data.id, cost, price) : null;
     resetForm();
     show($('formMsg'), ce?'err':'ok', ce ? 'تم الحفظ (الكود '+(data?.code||'')+') لكن تعذر حفظ التكلفة: '+ce.message : 'تم الحفظ. كود الجهاز: ' + (data?.code||''));
     await loadAll();
@@ -390,6 +467,7 @@ async function saveRecord(e){
 async function editRec(id){
   const r = all.find(x => x.id===id); if(!r) return;
   FIELDS.forEach(k => { if(k!=='status') $(k).value = r[k] ?? ''; });
+  setParts(getParts(r)); setChecks(r.final_checks); calcProfit();
   $('id').value = r.id; curStatus = r.status; $('anyst').checked = false;
   fillStatusSelect(r.status, false);
   $('formTitle').textContent = 'تعديل الجهاز ' + (r.code||'');
@@ -432,13 +510,13 @@ function renderList(){
   renderChips();
   const rows = filtered();
   $('listCount').textContent = `عدد السجلات: ${rows.length} من ${all.length}`;
-  const cols = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
+  const cols = ['code','branch','customer_name','company_name','device_type','brand','color','capacity','serial_number','status','engineer','received_date','delivery_date','cost','price','profit'].filter(k => !FIN.includes(k) || IS_ADMIN);
   $('listTable').innerHTML = '<tr><th class="noprint"></th>'+cols.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>' +
     rows.slice(0,500).map(r => {
       const n = (NEXT[r.status]||[]);
       const quick = n.length===1 ? `<br><button class="btn acc sm noprint" style="margin-top:4px" title="نقل للمرحلة التالية" onclick="advance(${r.id})">← ${esc(n[0])}</button>` : '';
-      return `<tr><td class="noprint" style="white-space:nowrap"><button class="btn sec sm" onclick="editRec(${r.id})">تعديل</button>${IS_ADMIN ? ` <button class="btn bad sm" onclick="delRec(${r.id})">حذف</button>` : ''}</td>`+
-        cols.map(k => '<td'+(k==='code'?' style="white-space:nowrap"':'')+'>'+(k==='status'?badge(r[k])+quick:k==='maintenance_cost'?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>';
+      return `<tr><td class="noprint" style="white-space:nowrap"><button class="btn sec sm" onclick="editRec(${r.id})">تعديل</button> <button class="btn sec sm" onclick="openMR(${r.id})">تقرير</button>${IS_ADMIN ? ` <button class="btn bad sm" onclick="delRec(${r.id})">حذف</button>` : ''}</td>`+
+        cols.map(k => '<td'+(k==='code'?' style="white-space:nowrap"':'')+'>'+(k==='status'?badge(r[k])+quick:FIN.includes(k)?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>';
     }).join('');
   if(rows.length>500) $('listCount').textContent += ' (يُعرض أول 500، استخدم البحث أو التصدير)';
 }
@@ -466,17 +544,17 @@ function shiftReport(dir){
 }
 function groupBy(rows, fn){
   const m = {};
-  rows.forEach(r => { const k = String(fn(r)||'').trim() || 'غير محدد'; (m[k] ||= {n:0,total:0}); m[k].n++; m[k].total += Number(r.maintenance_cost||0); });
+  rows.forEach(r => { const k = String(fn(r)||'').trim() || 'غير محدد'; (m[k] ||= {n:0,price:0,profit:0}); m[k].n++; m[k].price += Number(r.price||0); m[k].profit += Number(r.profit||0); });
   return Object.entries(m).sort((a,b)=>b[1].n-a[1].n);
 }
 function miniTable(title, g, top){
   const rows = top ? g.slice(0,top) : g;
-  return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th>${IS_ADMIN?'<th>القيمة</th>':''}</tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td>${IS_ADMIN?`<td>${money(v.total)}</td>`:''}</tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
+  return `<h4>${title}</h4><table><tr><th>البند</th><th>العدد</th>${IS_ADMIN?'<th>السعر</th><th>الربح</th>':''}</tr>${rows.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.n}</td>${IS_ADMIN?`<td>${money(v.price)}</td><td>${money(v.profit)}</td>`:''}</tr>`).join('')||'<tr><td colspan="3">لا بيانات</td></tr>'}</table>`;
 }
 function detailTable(rows){
-  const cols = ['code','branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','maintenance_cost'].filter(k => k!=='maintenance_cost' || IS_ADMIN);
+  const cols = ['code','branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','engineer','received_date','delivery_date','cost','price','profit'].filter(k => !FIN.includes(k) || IS_ADMIN);
   return `<div class="tw"><table><tr>${cols.map(k=>`<th>${HEAD[k]}</th>`).join('')}</tr>`+
-    (rows.map(r=>'<tr>'+cols.map(k=>'<td>'+(k==='status'?badge(r[k]):k==='maintenance_cost'?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>').join('') || `<tr><td colspan="${cols.length}">لا توجد سجلات في هذه الفترة</td></tr>`)+'</table></div>';
+    (rows.map(r=>'<tr>'+cols.map(k=>'<td>'+(k==='status'?badge(r[k]):FIN.includes(k)?money(r[k]):esc(r[k]))+'</td>').join('')+'</tr>').join('') || `<tr><td colspan="${cols.length}">لا توجد سجلات في هذه الفترة</td></tr>`)+'</table></div>';
 }
 function runReport(){
   const [from, to, title0] = rangeFor($('rtype').value, $('rdate').value || today());
@@ -486,7 +564,8 @@ function runReport(){
   const bycode = (a,b) => String(a.code||'').localeCompare(String(b.code||''));
   const recv  = base.filter(r => r.received_date >= from && r.received_date <= to).sort(bycode);
   const deliv = base.filter(r => r.status==='تم التسليم' && r.delivery_date && r.delivery_date >= from && r.delivery_date <= to).sort(bycode);
-  const revenue = deliv.reduce((s,r)=>s+Number(r.maintenance_cost||0),0);
+  const sum = k => deliv.reduce((s,r)=>s+Number(r[k]||0),0);
+  const revenue = sum('price'), costSum = sum('cost'), profitSum = sum('profit');
   const cnt = s => base.filter(r => r.status===s).length;
   const openN = base.filter(r => r.status!=='تم التسليم').length;
   const seen = new Map(); recv.concat(deliv).forEach(r => seen.set(r.id, r)); reportRows = [...seen.values()];
@@ -495,7 +574,7 @@ function runReport(){
     <div class="stats">
       <div class="stat">أجهزة مستلمة في الفترة<b>${recv.length}</b></div>
       <div class="stat">أجهزة مسلّمة في الفترة<b>${deliv.length}</b></div>
-      ${IS_ADMIN ? `<div class="stat">قيمة صيانة المسلّم<b>${money(revenue)}</b></div>` : ''}
+      ${IS_ADMIN ? `<div class="stat">إيراد المسلّم (السعر)<b>${money(revenue)}</b></div><div class="stat">تكلفة المسلّم<b>${money(costSum)}</b></div><div class="stat">ربح المسلّم<b>${money(profitSum)}</b></div>` : ''}
     </div>
     <h4>الوضع الحالي (${rb ? 'لأجهزة هذا الفرع' : 'لكل الأجهزة'})</h4>
     <div class="stats">
@@ -504,6 +583,7 @@ function runReport(){
       <div class="stat snap">بانتظار رد العميل<b>${cnt('بانتظار رد العميل')}</b></div>
       <div class="stat snap">جاهز للصيانة<b>${cnt('جاهز للصيانة')}</b></div>
       <div class="stat snap">واقف على قطع غيار<b>${cnt('واقف على قطع غيار')}</b></div>
+      <div class="stat snap">تمت الصيانة (بانتظار التسليم)<b>${cnt('تمت الصيانة')}</b></div>
       <div class="stat snap">رفض العميل (لم يُسلَّم)<b>${cnt('رفض العميل')}</b></div>
     </div>
     <div class="grid">
@@ -517,6 +597,92 @@ function runReport(){
     </div>
     <h4>الأجهزة المستلمة في الفترة (${recv.length})</h4>${detailTable(recv)}
     <h4>الأجهزة المسلّمة في الفترة (${deliv.length})</h4>${detailTable(deliv)}`;
+}
+
+/* ---------- قطع الغيار + التجربة النهائية + الربح ---------- */
+function calcProfit(){ $('profit').value = (Number($('price').value||0) - Number($('cost').value||0)).toFixed(2); }
+function addPart(name, qty){
+  const d = document.createElement('div'); d.className = 'prow';
+  d.innerHTML = `<input class="pname" placeholder="اسم القطعة" value="${esc(name||'')}"><input class="pqty" type="number" min="1" step="1" value="${esc(qty||1)}"><button type="button" class="btn bad sm" onclick="this.parentNode.remove()">×</button>`;
+  $('partsBox').appendChild(d);
+}
+function setParts(list){ $('partsBox').innerHTML = ''; (list||[]).forEach(p => addPart(p.name, p.qty)); }
+function collectParts(){
+  return [...$('partsBox').querySelectorAll('.prow')].map(d => ({ name:d.querySelector('.pname').value.trim(), qty:Math.max(1, parseInt(d.querySelector('.pqty').value)||1) })).filter(p => p.name);
+}
+function partsToText(ps){ return ps.map(p => `${p.name} × ${p.qty}`).join('\n'); }
+function parseParts(t){
+  return String(t||'').split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+    const m = l.match(/^(.*?)\s*(?:×|\s[xX*])\s*(\d+)$/);
+    return m && m[1] ? { name:m[1].trim(), qty:parseInt(m[2]) } : { name:l, qty:1 };
+  });
+}
+function getParts(r){ return (Array.isArray(r.parts) && r.parts.length) ? r.parts : parseParts(r.required_components); }
+function setChecks(o){ o = o || {}; CHECKS.forEach(([k]) => { $('chk_'+k).checked = !!o[k]; }); }
+function collectChecks(){ const o = {}; CHECKS.forEach(([k]) => { o[k] = $('chk_'+k).checked; }); return o; }
+function setAllChecks(){ const all_ = CHECKS.every(([k]) => $('chk_'+k).checked); CHECKS.forEach(([k]) => { $('chk_'+k).checked = !all_; }); }
+function dbErr(e){
+  const m = e.message || '';
+  return /parts|final_checks|maintenance_notes|schema cache|column/i.test(m)
+    ? 'تعذر الحفظ: '+m+' — شغّل ملف update_v4.sql في Supabase SQL Editor أولاً.' : 'تعذر الحفظ: '+m;
+}
+
+/* ---------- ورقة تقرير الصيانة (للطباعة) ---------- */
+function mrFind(loud){
+  const v = $('mrq').value.trim().toLowerCase();
+  if(!v){ show($('mrMsg'),'',''); $('mrSheet').innerHTML=''; return; }
+  let r = all.find(x => (x.code||'').toLowerCase()===v);
+  if(!r){
+    const m = all.filter(x => (x.serial_number||'').toLowerCase()===v || (x.code||'').toLowerCase().includes(v) || who(x).toLowerCase().includes(v));
+    if(m.length===1) r = m[0];
+    else if(loud){ show($('mrMsg'),'err', m.length ? m.length+' أجهزة مطابقة، اكتب الكود كاملاً (مثل '+m[0].code+')' : 'لا يوجد جهاز مطابق'); return; }
+    else return;
+  }
+  show($('mrMsg'),'',''); renderMR(r);
+}
+function openMR(id){
+  const r = all.find(x => x.id===id); if(!r) return;
+  tab('mr'); $('mrq').value = r.code; show($('mrMsg'),'',''); renderMR(r); window.scrollTo(0,0);
+}
+function renderMR(r){
+  mrId = r.id;
+  const C = r.final_checks || {}, CL = Object.fromEntries(CHECKS);
+  const parts = getParts(r), n = Math.max(parts.length, 6);
+  let pr = '';
+  for(let i=0;i<n;i++){
+    const p = parts[i];
+    pr += '<tr>' + (i===0 ? `<td class="mr-notes" rowspan="${n}">${esc(r.maintenance_notes||'').replace(/\n/g,'<br>')}</td>` : '') +
+      `<td class="mr-qty">${p?esc(p.qty):''}</td><td class="mr-part">${p?esc(p.name):''}</td></tr>`;
+  }
+  const chk = CHECK_ROWS.map(([a,b]) =>
+    `<tr><td class="cl">${CL[a]} :</td><td class="ck">${C[a]?'✓':''}</td><td class="cl">${CL[b]} :</td><td class="ck">${C[b]?'✓':''}</td></tr>`).join('');
+  const typ = [r.brand, r.device_type].filter(Boolean).join(' - ');
+  $('mrSheet').innerHTML = `
+  <div class="mr-sheet">
+    <div class="mr-top"><div class="mr-ar">${esc(COMPANY.ar)}</div><img src="${window.LOGO}" alt="Solar Gate"></div>
+    <div class="mr-band1">${esc(COMPANY.tag)}</div>
+    <div class="mr-band2">تقـــرير الصيـــانة</div>
+    <div class="mr-body">
+      <table>
+        <colgroup><col style="width:19%"><col style="width:31%"><col style="width:17%"><col style="width:33%"></colgroup>
+        <tr><td class="lbl">اسم العميل</td><td class="val">${esc(who(r))}</td><td class="lbl">قدرة الجهاز</td><td class="val">${esc(r.capacity)}</td></tr>
+        <tr><td class="lbl">تاريخ الاستلام</td><td class="val">${esc(fmtD(r.received_date))}</td><td class="lbl">نوع الجهاز</td><td class="val">${esc(typ)}</td></tr>
+        <tr><td class="lbl">تاريخ التسليم</td><td class="val">${esc(fmtD(r.delivery_date))}</td><td class="lbl">كود الجهاز</td><td class="val">${esc(r.code)}</td></tr>
+        <tr><td class="lbl">الرقم التسلسلي للجهاز</td><td class="val" colspan="3" dir="ltr">${esc(r.serial_number)}</td></tr>
+      </table>
+      <div class="mr-two">
+        <div class="mr-box"><h5>حالة استلام الجهاز</h5><div class="mr-fault">${esc(r.fault_reason||'')}</div></div>
+        <div class="mr-box"><h5>التجربه النهائيه للجهاز</h5><table dir="ltr">${chk}</table></div>
+      </div>
+      <table class="mr-parts">
+        <colgroup><col><col style="width:11%"><col style="width:34%"></colgroup>
+        <tr><th>بيـــان الصيـــانه</th><th>العدد</th><th>قطع الغيار</th></tr>
+        ${pr}
+      </table>
+    </div>
+    <div class="mr-sign"><div>المهندس المسئول عن حاله الجهاز: <span class="line">${esc(r.engineer||'')}</span></div><div>مدير الصيانه: <span class="line"></span></div></div>
+    <div class="mr-foot">العنـــــوان : ${esc(COMPANY.address)}</div>
+  </div>`;
 }
 
 /* ---------- التصدير (CSV يفتح في Excel بالعربي) ---------- */
@@ -573,11 +739,11 @@ function previewCSV(e){
       importRows.push({ branch:o.branch||null, customer_name:o.customer_name||null, company_name:o.company_name||null, device_type:dt, brand:o.brand||null, color:o.color||null,
         capacity:o.capacity||null, serial_number:o.serial_number||null, status:st, fault_reason:o.fault_reason||null, engineer:o.engineer||null,
         required_components:o.required_components||null, received_date:normDate(o.received_date)||today(),
-        delivery_date:normDate(o.delivery_date) || (st==='تم التسليم'?today():null), maintenance_cost:num(o.maintenance_cost) });
+        delivery_date:normDate(o.delivery_date) || (st==='تم التسليم'?today():null), maintenance_notes:o.maintenance_notes||null, cost:num(o.cost), price:num(o.price) });
     });
     importRows.sort((a,b)=>a.received_date.localeCompare(b.received_date));
     show($('impMsg'),'ok',`جاهز للاستيراد: ${importRows.length} سجل (تخطي ${skipped} بدون عميل/شركة، ${badType} بنوع جهاز غير معروف سيُترك فارغاً)`);
-    const pc = ['branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','received_date','maintenance_cost'];
+    const pc = ['branch','customer_name','company_name','device_type','brand','capacity','serial_number','status','received_date','cost','price'];
     $('impPreview').innerHTML = '<div class="tw" style="max-height:260px"><table><tr>'+pc.map(k=>`<th>${HEAD[k]}</th>`).join('')+'</tr>'+
       importRows.slice(0,8).map(r=>'<tr>'+pc.map(k=>`<td>${esc(r[k])}</td>`).join('')+'</tr>').join('')+'</table></div><p>معاينة أول 8 صفوف</p>';
     $('impBtn').classList.remove('hidden');
@@ -588,11 +754,11 @@ async function doImport(){
   $('impBtn').disabled = true;
   for(let i=0;i<importRows.length;i+=200){
     const chunk = importRows.slice(i,i+200);
-    const costs = chunk.map(r => r.maintenance_cost);
-    const payload = chunk.map(({maintenance_cost, ...rest}) => rest);
+    const fin = chunk.map(r => ({ cost:r.cost, price:r.price }));
+    const payload = chunk.map(({cost, price, ...rest}) => rest);
     const { data, error } = await sb.from('maintenance_jobs').insert(payload).select('id');
     if(error){ show($('impMsg'),'err','فشل الاستيراد: '+error.message); $('impBtn').disabled=false; return; }
-    const cr = (data||[]).map((d,j) => ({ job_id:d.id, maintenance_cost:costs[j] })).filter(c => c.maintenance_cost > 0);
+    const cr = (data||[]).map((d,j) => ({ job_id:d.id, cost:fin[j].cost, price:fin[j].price })).filter(c => c.cost > 0 || c.price > 0);
     if(cr.length){
       const { error:e2 } = await sb.from('job_costs').upsert(cr);
       if(e2){ show($('impMsg'),'err','تم استيراد الأجهزة لكن تعذر حفظ التكاليف: '+e2.message); $('impBtn').disabled=false; return; }
